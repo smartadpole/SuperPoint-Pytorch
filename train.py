@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 from model.magic_point import MagicPoint
 from model.superpoint_bn import SuperPointBNNet
 from solver.loss import loss_func
+from utils.file import MkdirSimple
 
 #map magicleap weigt to our model
 model_dict_map= \
@@ -86,12 +87,15 @@ def train_eval(model, dataloader, config):
                 ##do evaluation
                 save_iter = int(0.5*len(dataloader['train']))#half epoch
                 if (i%save_iter==0 and i!=0) or (i+1)==len(dataloader['train']):
-                    model.eval()
-                    eval_loss = do_eval(model, dataloader['test'], config, device)
-                    model.train()
+                    eval_loss = 0
+                    # model.eval()
+                    # eval_loss = do_eval(model, dataloader['test'], config, device)
+                    # model.train()
 
                     save_path = os.path.join(config['solver']['save_dir'],
-                                             config['solver']['model_name'] + '_{}_{}.pth').format(epoch, round(eval_loss, 3))
+                                             config['solver']['model_name'],
+                                             '{}_{}.pth').format(epoch, round(eval_loss, 3))
+                    MkdirSimple(save_path)
                     torch.save(model.state_dict(), save_path)
                     print('Epoch [{}/{}], Step [{}/{}], Eval loss {:.3f}, Checkpoint saved to {}'
                           .format(epoch, config['solver']['epoch'], i, len(dataloader['train']), eval_loss, save_path))
@@ -153,17 +157,17 @@ if __name__=='__main__':
     if not os.path.exists(config['solver']['save_dir']):
         os.makedirs(config['solver']['save_dir'])
 
-    device = 'cuda:2' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:{}'.format(config['cuda']) if torch.cuda.is_available() else 'cpu'
 
     ##Make Dataloader
     data_loaders = None
     if config['data']['name'] == 'coco':
         datasets = {k: COCODataset(config['data'], is_train=True if k == 'train' else False, device=device)
-                    for k in ['test', 'train']}
+                    for k in ['train']}
         data_loaders = {k: DataLoader(datasets[k],
                                       config['solver']['{}_batch_size'.format(k)],
                                       collate_fn=datasets[k].batch_collator,
-                                      shuffle=True) for k in ['train', 'test']}
+                                      shuffle=True) for k in ['train',]}
     elif config['data']['name'] == 'synthetic':
         datasets = {'train': SyntheticShapes(config['data'], task=['training', 'validation'], device=device),
                     'test': SyntheticShapes(config['data'], task=['test', ], device=device)}

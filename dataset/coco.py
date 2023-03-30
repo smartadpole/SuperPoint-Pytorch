@@ -7,8 +7,9 @@ from torch.utils.data import DataLoader
 from utils.params import dict_update
 from dataset.utils.homographic_augmentation import homographic_aug_pipline
 from dataset.utils.photometric_augmentation import PhotoAugmentor
-from utils.keypoint_op import compute_keypoint_map
+from utils.keypoint_op import compute_keypoint_map_xy
 from dataset.utils.photometric_augmentation import *
+import cv2
 
 
 class COCODataset(torch.utils.data.Dataset):
@@ -62,23 +63,29 @@ class COCODataset(torch.utils.data.Dataset):
         data_path = self.samples[idx]  # raw image path of processed image and point path
         img = cv2.imread(data_path['image'], 0)  # Gray image
         h, w = img.shape
-        img = cv2.resize(img, self.resize[::-1])
-        pts = None if data_path['label'] is None else data_path['label'][:, 0:2]  # N*2,yx
+        pts = None if data_path['label'] is None else data_path['label'][:, 0:2]  # N*2,xy
 
-        # resize pts
-        H, W = self.resize
-        pts[:, 0] = pts[:, 0] * W / w
-        pts[:, 1] = pts[:, 1] * H / h
+        kpts_tensor, kpts_map = None, None
 
-        id = np.argwhere(pts[:, 0] < W)
-        pts = pts[id].squeeze(axis=1)
-        id = np.argwhere(pts[:, 1] < H)
-        pts = pts[id].squeeze(axis=1)
+        if pts is not None:
+            id = np.argwhere(pts[:, 0] < w)
+            pts = pts[id].squeeze(axis=1)
+            id = np.argwhere(pts[:, 1] < h)
+            pts = pts[id].squeeze(axis=1)
 
-        # init data dict
-        img_tensor = torch.as_tensor(img.copy(), dtype=torch.float, device=self.device)
-        kpts_tensor = None if pts is None else torch.as_tensor(pts, dtype=torch.float, device=self.device)
-        kpts_map = None if pts is None else compute_keypoint_map(kpts_tensor, img.shape, device=self.device)
+            img = cv2.resize(img, self.resize[::-1])
+
+
+            # resize pts
+            H, W = self.resize
+            pts[:, 0] = pts[:, 0] * W / w
+            pts[:, 1] = pts[:, 1] * H / h
+
+            # init data dict
+            img_tensor = torch.as_tensor(img.copy(), dtype=torch.float, device=self.device)
+            kpts_tensor = torch.as_tensor(pts, dtype=torch.float, device=self.device)
+            kpts_map =  compute_keypoint_map_xy(kpts_tensor, img.shape, device=self.device)
+
         valid_mask = torch.ones(img.shape, dtype=torch.float, device=self.device)
 
         data = {'raw': {'img': img_tensor,

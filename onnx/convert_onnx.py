@@ -15,7 +15,7 @@ sys.path.append(os.path.join(CURRENT_DIR, '../'))
 import argparse
 from model.export.superpoint_bn import SuperPointBNNet
 import torch
-import yaml
+from utils.config import load_config
 
 W, H = 640, 400
 
@@ -32,12 +32,7 @@ def GetArgs():
 def main():
     args = GetArgs()
 
-    config_file = args.config
-    assert (os.path.exists(config_file))
-    ##
-    with open(config_file, 'r') as fin:
-        config = yaml.safe_load(fin)
-
+    config = load_config(args.config)
     model = SuperPointBNNet(config['model'], using_bn=config['model']['using_bn'])
 
     # load ckpts

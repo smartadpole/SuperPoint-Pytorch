@@ -183,7 +183,7 @@ if __name__=='__main__':
 
     ##Load Pretrained Model
     if os.path.exists(config['model']['pretrained_model']):
-        pre_model_dict = torch.load(config['model']['pretrained_model'])
+        pre_model_dict = torch.load(config['model']['pretrained_model'], map_location='cpu')
         model_dict = model.state_dict()
         for k,v in pre_model_dict.items():
             if k in model_dict.keys() and v.shape==model_dict[k].shape:

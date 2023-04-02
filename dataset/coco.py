@@ -109,7 +109,7 @@ class COCODataset(torch.utils.data.Dataset):
             data_homo = homographic_aug_pipline(data['warp']['img'],
                                                 data['warp']['kpts'],
                                                 self.config['augmentation']['homographic'],
-                                                device=self.device)
+                                                device=self.device, transpose=True)
             data.update(data_homo)
 
         if photo_enable:
